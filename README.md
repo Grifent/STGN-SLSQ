@@ -1,6 +1,4 @@
-# STGN
+# STGN-SLSQ
 
-Code repository for our paper "Spatial-Temporal Graph Network for Video Crowd Counting" submitted to TCSVT.
+Fork of the code implementation of the paper [Spatial-Temporal Graph Network for Video Crowd Counting](https://doi.org/10.1109/TCSVT.2022.3187194) submitted to TCSVT. Updated to be trained on crowd counting data recorded by Surf Life Saving QLD (SLSQ) on QLD beaches. 
 
-
-[pretrained model](https://pan.baidu.com/s/1Tyq3LOjWQwV1eyYLeFN1Bw) (code:ekc2)  
