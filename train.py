@@ -20,13 +20,13 @@ def main():
         description='Train CSRNet in Crowd dataset.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model_path', default='STGN.pth', type=str)
-    parser.add_argument('--dataset', default='Venice', type=str)
+    parser.add_argument('--dataset', default='SLSQ-STGN', type=str)
     parser.add_argument('--valid', default=0, type=float)
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--epochs', default=120, type=int)
     parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--gamma', default=5, type=float)
-    parser.add_argument('--max_len', default=4, type=int)
+    parser.add_argument('--max_len', default=5, type=int) # default is 4
     parser.add_argument('--channel', default=128, type=int)
     parser.add_argument('--block_num', default=4, type=int)
     parser.add_argument('--shape', default=[360, 480], nargs='+', type=int)
@@ -35,6 +35,8 @@ def main():
     parser.add_argument('--adaptive', action='store_true', help='')
     parser.add_argument('--agg', action='store_true', help='')
     parser.add_argument('--use_cuda', default=True, type=bool)
+    # parser.add_argument("--exp_name", default='large_person_type', help="Name of the experiment. ")
+    parser.add_argument("--exp_name", default='noosa', help="Name of the experiment. ")
 
     args = vars(parser.parse_args())
     if args['dataset'] == 'UCSD':
@@ -47,6 +49,8 @@ def main():
         args['shape'] = [360, 640]
     elif args['dataset'] == 'TRANCOS':
         args['shape'] = [360, 480]
+    elif args['dataset'] == 'SLSQ-STGN':
+        args['shape'] = [360//2, 640//2] # possibly increase this to [720, 1280] if GPU can handle it
     
     save_path = './models/' + args['dataset']
     print(args)
@@ -75,7 +79,12 @@ def main():
     valid_transf = NP_T.ToTensor()
 
     # instantiate the dataset
-    dataset_path = os.path.join('E://code//Traffic//Counting//Datasets', args['dataset'])
+    # dataset_path = os.path.join('E://code//Traffic//Counting//Datasets', args['dataset']) # original path
+    if args['dataset'] == 'SLSQ-STGN':
+        dataset_path = os.path.join('../dataset', args['dataset'], 'processed_data', args['exp_name'])
+    else:
+        dataset_path = os.path.join('../dataset', args['dataset'])
+
     train_data = CrowdSeq(train=True,
                           path=dataset_path,
                           out_shape=args['shape'],
@@ -113,7 +122,7 @@ def main():
     for epoch in range(args['epochs']):
         print_epoch = 'Epoch {}/{}'.format(epoch, args['epochs'] - 1)
         print(print_epoch, flush=True)
-        with open(log_path, 'w') as f:
+        with open(log_path, 'a') as f:
             f.write(print_epoch + '\n')
 
         # training phase
@@ -159,9 +168,9 @@ def main():
         train_count_loss = sum(count_loss_hist) / len(count_loss_hist)
         train_count_err = sum(count_err_hist) / len(count_err_hist)
         print('Training statistics:', flush=True)
-        log = '{} density loss: {:.3f} | count loss: {:.3f} | count error: {:.3f}'.format(datetime.now(), train_density_loss, train_count_loss, train_count_err)
+        log = '{} - density loss: {:.3f} | count loss: {:.3f} | count error: {:.3f}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), train_density_loss, train_count_loss, train_count_err)
         print(log, flush=True)
-        with open(log_path, 'w') as f:
+        with open(log_path, 'a') as f:
             f.write(log + '\n')
 
         # validation phase
@@ -216,9 +225,9 @@ def main():
                     model.state_dict(),
                     os.path.join(save_path, args['model_path']))
         print('Validation statistics:', flush=True)
-        log = '{} density loss: {:.3f} | count loss: {:.3f} | MAE: {:.3f} | MSE: {:.3f}'.format(datetime.now(), valid_density_loss, valid_count_loss, valid_mae, valid_mse)
+        log = '{} - density loss: {:.3f} | count loss: {:.3f} | MAE: {:.3f} | MSE: {:.3f}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), valid_density_loss, valid_count_loss, valid_mae, valid_mse)
         print(log, flush=True)
-        with open(log_path, 'w') as f:
+        with open(log_path, 'a') as f:
             f.write(log + '\n')
 
 
