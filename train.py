@@ -21,7 +21,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Train CSRNet in Crowd dataset.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model_name', default='STGN', type=str)
+    parser.add_argument('--model_name', default='STGN-SLSQ', type=str)
     parser.add_argument('--dataset', default='SLSQ', type=str)
     parser.add_argument('--valid', default=0, type=float)
     parser.add_argument('--lr', default=1e-5, type=float)
@@ -86,8 +86,8 @@ def main():
     # dataset_path = os.path.join('E://code//Traffic//Counting//Datasets', args['dataset']) # original path
 
     # change root if using HPC local storage
-    if args.HPC:
-        dataset_root = '/data1/STGN-SLSQ/SLSQ/'
+    if args['HPC']:
+        dataset_root = '/data1/STGN-SLSQ/'
     else:
         dataset_root = '../dataset'
 

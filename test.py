@@ -17,7 +17,7 @@ def main():
         description='Train CSRNet in Crowd dataset.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # parser.add_argument('--model_path', default="STGN_2022-10-01.pth", type=str, help="Model file to be tested. Do not include path to the model.")
-    parser.add_argument('--model_path', default=None, type=str, help="Model file to be tested. Do not include path to the model.")
+    parser.add_argument('--model_path', default=None, type=str, help="Model file to be tested. Leave as `None` to test most recent model")
     parser.add_argument('--dataset', default='SLSQ', type=str)
     parser.add_argument('--valid', default=0, type=float)
     parser.add_argument('--lr', default=1e-4, type=float)
@@ -84,8 +84,8 @@ def main():
     # dataset_path = os.path.join('E://code//Traffic//Counting//Datasets', dataset)
 
     # change root if using HPC local storage
-    if args.HPC:
-        dataset_root = '/data1/STGN-SLSQ/SLSQ/'
+    if args['HPC']:
+        dataset_root = '/data1/STGN-SLSQ/'
     else:
         dataset_root = '../dataset'
 

@@ -243,7 +243,7 @@ def read_xml(xml_file_path, cc_model, save_dir, im_path, max_len, seq_num):
         image = images[im]
         image_name = images[im]['@name']
 
-        img = cv2.imread(im_path + image_name)
+        img = cv2.imread(os.path.join(im_path, image_name))
 
         # if image_name in skip_files:
         #     continue
@@ -331,7 +331,7 @@ def read_xml(xml_file_path, cc_model, save_dir, im_path, max_len, seq_num):
                 npy_path = os.path.join(seq_gt_path, image_name.replace('png', 'npy')) # with sequence IDs
                 np.save(npy_path, np.hstack((points_arr,labels_arr)))
 
-                img = cv2.imread(im_path + image_name)
+                img = cv2.imread(os.path.join(im_path, image_name))
                 seq_im_path = os.path.join(save_dir, 'images/', str(seq_num))            
                 mkdir(seq_im_path)
                 cv2.imwrite(os.path.join(seq_im_path, image_name), img)
@@ -347,7 +347,7 @@ def read_xml(xml_file_path, cc_model, save_dir, im_path, max_len, seq_num):
                 json_path = "json_files/" + image_name.replace('png', 'json')
 
                 # plt.savefig("temp/" + image_name)
-                cv2.imwrite("temp/" + image_name, img)
+                cv2.imwrite(os.path.join("temp/", image_name), img)
                 with open(json_path, 'w') as fp:
                     json.dump(json_dict, fp, sort_keys=True, indent=4)
 
@@ -367,6 +367,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", default='../dataset/SLSQ/',
                         help="Root path for the dataset")
+    parser.add_argument('--dataset', default='SLSQ', type=str)
     parser.add_argument("--exp_name", default='large_person_type', help="Name of the experiment. ")
     parser.add_argument("--model", default='DKPNET', help="Model that we are extracting features for. ")
     parser.add_argument('--max_len', default=5, type=int) # default is 4
@@ -400,8 +401,8 @@ if __name__ == '__main__':
 
     if args.HPC:
         args.root_dir = '/data1/STGN-SLSQ'
-        format_data.unzip_data(args.root_dir, 'SLSQ') # unzip data to local HPC storage
-        args.root_dir = '/data1/STGN-SLSQ/SLSQ/'
+        format_data.unzip_data(args.root_dir, args.dataset) # unzip data to local HPC storage
+        args.root_dir = os.path.join(args.root_dir, args.dataset)
 
     try:  
         train_data_save_dir = os.path.join(args.root_dir, 'processed_data/', args.exp_name, 'train_data/')
@@ -440,7 +441,7 @@ if __name__ == '__main__':
             print("#--------------------------------------------------#")
 
             annot_file_path = os.path.join(args.root_dir, 'annots/{}.xml'.format(folder))
-            img_path = args.root_dir + 'images/' + folder + '/'
+            img_path = os.path.join(args.root_dir, 'images', folder)
             # img_path = os.path.join(args.root_dir, 'images/', folder)
 
             seq_num = read_xml(annot_file_path, args.model, train_data_save_dir, img_path, args.max_len, seq_num)
@@ -453,8 +454,8 @@ if __name__ == '__main__':
             print('-----------processing %s----------' % folder)
             print("#--------------------------------------------------#")
 
-            annot_file_path = args.root_dir + 'annots/{}.xml'.format(folder)
-            img_path = args.root_dir + 'images/' + folder + '/'
+            annot_file_path = os.path.join(args.root_dir, 'annots/{}.xml'.format(folder))
+            img_path = os.path.join(args.root_dir, 'images', folder)
 
             seq_num = read_xml(annot_file_path, args.model, test_data_save_dir, img_path, args.max_len, seq_num)
     
