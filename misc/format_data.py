@@ -16,7 +16,7 @@ def unzip_data(local_path, dataset_name):
         os.makedirs(local_path)
 
     # open file
-    file = tarfile.open(f"{os.path.join('../dataset', dataset_name)}.tar.gz")
+    file = tarfile.open(f"{os.path.join('../../dataset', dataset_name)}.tar.gz")
     
     # extracting file
     print(f"Extracting dataset to '{local_path}'")
