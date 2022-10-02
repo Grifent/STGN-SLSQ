@@ -61,7 +61,7 @@ def main():
         os.makedirs(save_path)
     
     save_time = datetime.now()
-    log_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth.txt")
+    log_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d')}.pth.txt")
     if os.path.exists(log_path):
         os.remove(log_path)
     with open(log_path, 'w') as f:
@@ -236,7 +236,7 @@ def main():
                 min_mae = valid_mae
                 min_mse = valid_mse
                 min_epoch = epoch + 1
-                best_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
+                best_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d')}.pth")
                 torch.save(
                     model.state_dict(),
                     best_path)
@@ -254,8 +254,8 @@ def main():
     with open(log_path, 'a') as f:
             f.write(log + '\n')
 
-    model_generic_path = os.path.join('models', args['dataset'], 'STGN.pth')
-    model_final_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
+    model_generic_path = os.path.join('models', args['dataset'], 'STGN_latest.pth')
+    model_final_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d')}.pth")
     shutil.copyfile(model_final_path, model_generic_path)
 
 
