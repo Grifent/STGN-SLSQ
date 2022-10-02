@@ -16,7 +16,7 @@ import math
 import scipy.io as scio
 import argparse
 import shutil
-import format_data
+import misc.format_data as format_data
 
 
 def get_points(root_path, mat_path):
