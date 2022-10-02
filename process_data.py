@@ -1,5 +1,5 @@
 ### Process the SLSQ data into format required by STGN
-### (excuse the terrible code, half was butchered from P2PNet to get this running quickly)
+# (excuse the terrible code, half was butchered from P2PNet to get this running quickly)
 
 import numpy as np
 import xmltodict
@@ -16,6 +16,7 @@ import math
 import scipy.io as scio
 import argparse
 import shutil
+import format_data
 
 
 def get_points(root_path, mat_path):
@@ -226,7 +227,7 @@ def mkdirs(paths):
         mkdir(paths)
 
 
-def read_xml(xml_file_path, cc_model, save_dir, im_path, seq_len, seq_num):
+def read_xml(xml_file_path, cc_model, save_dir, im_path, max_len, seq_num):
 
     # skip_files = ['29_01_2022_9_56_17_00006.png', '29_01_2022_9_56_17_00005.png']
     label_dict = ['none', 'head', 'head_swimming', 'head_boardrider']
@@ -248,7 +249,7 @@ def read_xml(xml_file_path, cc_model, save_dir, im_path, seq_len, seq_num):
         #     continue
 
         if "points" in image.keys():
-            if seq_counter % (seq_len) == 0 and im != 0: # divide into sequences
+            if seq_counter % (max_len) == 0 and im != 0: # divide into sequences
                 seq_num += 1
                 seq_counter = 0
             print('\t processing %d/%d - seq %d' % (im+1, len(images), seq_num))
@@ -364,11 +365,12 @@ def read_xml(xml_file_path, cc_model, save_dir, im_path, seq_len, seq_num):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root_dir", default='../dataset/SLSQ-STGN/',
+    parser.add_argument("--root_dir", default='../dataset/SLSQ/',
                         help="Root path for the dataset")
     parser.add_argument("--exp_name", default='large_person_type', help="Name of the experiment. ")
     parser.add_argument("--model", default='DKPNET', help="Model that we are extracting features for. ")
-    parser.add_argument('--seq_len', default=5, type=int) # default is 4
+    parser.add_argument('--max_len', default=5, type=int) # default is 4
+    parser.add_argument("--HPC", default=False, action="store_true", help="Whether to unpack data to HPC local storage first. ") 
     args = parser.parse_args()
 
     if args.exp_name == 'surfersparadise' or args.exp_name == 'surfersparadise_person_type':
@@ -396,59 +398,70 @@ if __name__ == '__main__':
         train_set = ['portdouglas_6_02_2022', 'portdouglas_08_02_2022', 'portdouglas_08_02_2022_b', 'sunshinebeach_29_01_2022_b', 'sunshinebeach_29_01_2022', 'sunshinebeach_02_02_2022', 'surfersparadise_05_02_2022', 'surfersparadise_05_02_2022_b', 'surfers_paradise_sunrise1']
         test_set = ['noosa_08_02_2022',  'noosa_08_02_2022_b', 'noosa_sunset_1', 'noosa_sunset_2']
 
-    train_data_save_dir = os.path.join(args.root_dir, 'processed_data/', args.exp_name, 'train_data/')
-    test_data_save_dir = os.path.join(args.root_dir, 'processed_data/', args.exp_name, 'test_data/')
+    if args.HPC:
+        args.root_dir = '/data1/STGN-SLSQ'
+        format_data.unzip_data(args.root_dir, 'SLSQ') # unzip data to local HPC storage
+        args.root_dir = '/data1/STGN-SLSQ/SLSQ/'
 
-    # Delete existing directories, start with clean slate
-    if os.path.exists(train_data_save_dir):
-        shutil.rmtree(train_data_save_dir)
-    if os.path.exists(test_data_save_dir):
-        shutil.rmtree(test_data_save_dir)
+    try:  
+        train_data_save_dir = os.path.join(args.root_dir, 'processed_data/', args.exp_name, 'train_data/')
+        test_data_save_dir = os.path.join(args.root_dir, 'processed_data/', args.exp_name, 'test_data/')
 
-    mkdir(os.path.join(train_data_save_dir, 'ground-truth/'))
-    mkdir(os.path.join(train_data_save_dir, 'images/'))
-    mkdir(os.path.join(test_data_save_dir, 'ground-truth/'))
-    mkdir(os.path.join(test_data_save_dir, 'images/'))
+        # Delete existing directories, start with clean slate
+        if os.path.exists(train_data_save_dir):
+            shutil.rmtree(train_data_save_dir)
+        if os.path.exists(test_data_save_dir):
+            shutil.rmtree(test_data_save_dir)
 
-    # if not os.path.exists(train_data_save_dir + 'ground-truth/'):
-    #     os.makedirs(train_data_save_dir + 'ground-truth/')
+        mkdir(os.path.join(train_data_save_dir, 'ground-truth/'))
+        mkdir(os.path.join(train_data_save_dir, 'images/'))
+        mkdir(os.path.join(test_data_save_dir, 'ground-truth/'))
+        mkdir(os.path.join(test_data_save_dir, 'images/'))
 
-    # if not os.path.exists(train_data_save_dir + 'images/'):
-    #     os.makedirs(train_data_save_dir + 'images/')
+        # if not os.path.exists(train_data_save_dir + 'ground-truth/'):
+        #     os.makedirs(train_data_save_dir + 'ground-truth/')
 
-    # if not os.path.exists(test_data_save_dir + 'ground-truth/'):
-    #     os.makedirs(test_data_save_dir + 'ground-truth/')
+        # if not os.path.exists(train_data_save_dir + 'images/'):
+        #     os.makedirs(train_data_save_dir + 'images/')
 
-    # if not os.path.exists(test_data_save_dir + 'images/'):
-    #     os.makedirs(test_data_save_dir + 'images/')
+        # if not os.path.exists(test_data_save_dir + 'ground-truth/'):
+        #     os.makedirs(test_data_save_dir + 'ground-truth/')
 
-    # extracting the annotations from xml files
-    print('extracting annotations of training set ....')
-    seq_num = 0 # set the initial count for each sequence, tracked between folders
-    for folder in train_set:
+        # if not os.path.exists(test_data_save_dir + 'images/'):
+        #     os.makedirs(test_data_save_dir + 'images/')
 
-        print("#--------------------------------------------------#")
-        print('-----------processing %s----------' % folder)
-        print("#--------------------------------------------------#")
+        # extracting the annotations from xml files
+        print('extracting annotations of training set ....')
+        seq_num = 0 # set the initial count for each sequence, tracked between folders
+        for folder in train_set:
 
-        annot_file_path = os.path.join(args.root_dir, 'annots/{}.xml'.format(folder))
-        img_path = args.root_dir + 'images/' + folder + '/'
-        # img_path = os.path.join(args.root_dir, 'images/', folder)
+            print("#--------------------------------------------------#")
+            print('-----------processing %s----------' % folder)
+            print("#--------------------------------------------------#")
 
-        seq_num = read_xml(annot_file_path, args.model, train_data_save_dir, img_path, args.seq_len, seq_num)
+            annot_file_path = os.path.join(args.root_dir, 'annots/{}.xml'.format(folder))
+            img_path = args.root_dir + 'images/' + folder + '/'
+            # img_path = os.path.join(args.root_dir, 'images/', folder)
 
-    print('extracting annotations of testing set ....')
-    seq_num = 0 # reset sequence count
-    for folder in test_set:
+            seq_num = read_xml(annot_file_path, args.model, train_data_save_dir, img_path, args.max_len, seq_num)
 
-        print("#--------------------------------------------------#")
-        print('-----------processing %s----------' % folder)
-        print("#--------------------------------------------------#")
+        print('extracting annotations of testing set ....')
+        seq_num = 0 # reset sequence count
+        for folder in test_set:
 
-        annot_file_path = args.root_dir + 'annots/{}.xml'.format(folder)
-        img_path = args.root_dir + 'images/' + folder + '/'
+            print("#--------------------------------------------------#")
+            print('-----------processing %s----------' % folder)
+            print("#--------------------------------------------------#")
 
-        seq_num = read_xml(annot_file_path, args.model, test_data_save_dir, img_path, args.seq_len, seq_num)
+            annot_file_path = args.root_dir + 'annots/{}.xml'.format(folder)
+            img_path = args.root_dir + 'images/' + folder + '/'
+
+            seq_num = read_xml(annot_file_path, args.model, test_data_save_dir, img_path, args.max_len, seq_num)
+    
+    except Exception as exc:
+        format_data.cleanup(args.root_dir)
+        raise RuntimeError(f"Error during processing data: {exc}") from exc
+            
 
     # # converting the extracted annotations to DKPNET format
     # print('processing extracted annotations of training set of DKPNET....')

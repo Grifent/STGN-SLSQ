@@ -34,19 +34,25 @@ class TestDataset(Dataset):
         self.gamma = gamma
         self.load_all = load_all
 
+        # if train:                                                     # OLD PATHS
+        #     self.img_path = os.path.join(self.path, 'train_data')
+        #     self.label_path = os.path.join(self.path, 'train_label')
+        # else:
+        #     self.img_path = os.path.join(self.path, 'test_data')
+        #     self.label_path = os.path.join(self.path, 'test_label')
         if train:
-            self.img_path = os.path.join(self.path, 'train_data')
-            self.label_path = os.path.join(self.path, 'train_label')
+            self.img_path = os.path.join(self.path, 'train_data', 'images')
+            self.label_path = os.path.join(self.path, 'train_data', 'ground-truth')
         else:
-            self.img_path = os.path.join(self.path, 'test_data')
-            self.label_path = os.path.join(self.path, 'test_label')
+            self.img_path = os.path.join(self.path, 'test_data', 'images')
+            self.label_path = os.path.join(self.path, 'test_data', 'ground-truth')
 
         dirs = os.listdir(self.img_path)
         self.image_files = []
         for dir_name in dirs:
             self.image_files += [
                 '{}&{}'.format(dir_name, f)
-                for f in os.listdir(os.path.join(self.img_path, dir_name))
+                for f in sorted(os.listdir(os.path.join(self.img_path, dir_name)))
                 if f.endswith('png') or f.endswith('jpg')
             ]
 
@@ -63,7 +69,8 @@ class TestDataset(Dataset):
         img = cv2.imread(os.path.join(self.img_path, dir_name, img_name))
 #         if len(img.shape) == 2:
 #             print(os.path.join(self.img_path, dir_name, img_name))
-        points = np.load(os.path.join(self.label_path, dir_name, img_name[:-4]+ '.npy'))
+        # points = np.load(os.path.join(self.label_path, dir_name, img_name[:-4]+ '.npy')) # CAN GET THE PERSON TYPE IF NEEDED FOR MULTIHEAD TRAINING
+        points = np.load(os.path.join(self.label_path, dir_name, img_name[:-4]+ '.npy'))[:,0:2]
         H_orig, W_orig = img.shape[:2]
         if H_orig != self.out_shape[0] or W_orig != self.out_shape[1]:
             # img = img.resize((self.out_shape[1], self.out_shape[0]), Image.BILINEAR)
@@ -71,7 +78,7 @@ class TestDataset(Dataset):
             ratio = self.out_shape / np.array([H_orig, W_orig])
             points = np.round(points*ratio)
         img = np.array(img, np.float32)
-        points = np.array(points, np.int32)
+        points = np.array(points, np.int32) # SHOULD THIS BE INT OR FLOAT?
         points = np.minimum(points, self.out_shape - 1)
         gt = np.zeros(self.out_shape)
         gt[points[:, 0], points[:, 1]] = 1

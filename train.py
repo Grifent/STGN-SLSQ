@@ -14,13 +14,15 @@ import np_transforms as NP_T
 from CrowdDataset import CrowdSeq
 from model import STGN
 
+import shutil
+
 
 def main():
     parser = argparse.ArgumentParser(
         description='Train CSRNet in Crowd dataset.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model_path', default='STGN.pth', type=str)
-    parser.add_argument('--dataset', default='SLSQ-STGN', type=str)
+    parser.add_argument('--model_name', default='STGN', type=str)
+    parser.add_argument('--dataset', default='SLSQ', type=str)
     parser.add_argument('--valid', default=0, type=float)
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--epochs', default=120, type=int)
@@ -37,6 +39,7 @@ def main():
     parser.add_argument('--use_cuda', default=True, type=bool)
     # parser.add_argument("--exp_name", default='large_person_type', help="Name of the experiment. ")
     parser.add_argument("--exp_name", default='noosa', help="Name of the experiment. ")
+    parser.add_argument("--HPC", default=False, action="store_true", help="Whether to unpack data to HPC local storage first. ") 
 
     args = vars(parser.parse_args())
     if args['dataset'] == 'UCSD':
@@ -49,15 +52,16 @@ def main():
         args['shape'] = [360, 640]
     elif args['dataset'] == 'TRANCOS':
         args['shape'] = [360, 480]
-    elif args['dataset'] == 'SLSQ-STGN':
-        args['shape'] = [360//2, 640//2] # possibly increase this to [720, 1280] if GPU can handle it
+    elif args['dataset'] == 'SLSQ':
+        args['shape'] = [720, 1280] # possibly increase this to [720, 1280] if GPU can handle it
     
-    save_path = './models/' + args['dataset']
+    save_path = os.path.join('models', args['dataset'], args['exp_name'])
     print(args)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     
-    log_path = os.path.join(save_path, args['model_path']) + '.txt'
+    save_time = datetime.now()
+    log_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth.txt")
     if os.path.exists(log_path):
         os.remove(log_path)
     with open(log_path, 'w') as f:
@@ -80,10 +84,17 @@ def main():
 
     # instantiate the dataset
     # dataset_path = os.path.join('E://code//Traffic//Counting//Datasets', args['dataset']) # original path
-    if args['dataset'] == 'SLSQ-STGN':
-        dataset_path = os.path.join('../dataset', args['dataset'], 'processed_data', args['exp_name'])
+
+    # change root if using HPC local storage
+    if args.HPC:
+        dataset_root = '/data1/STGN-SLSQ/SLSQ/'
     else:
-        dataset_path = os.path.join('../dataset', args['dataset'])
+        dataset_root = '../dataset'
+
+    if args['dataset'] == 'SLSQ':
+        dataset_path = os.path.join(dataset_root, args['dataset'], 'processed_data', args['exp_name'])
+    else:
+        dataset_path = os.path.join(dataset_root, args['dataset'])
 
     train_data = CrowdSeq(train=True,
                           path=dataset_path,
@@ -221,14 +232,22 @@ def main():
         else:
             if valid_mae <= min_mae:
                 min_mae = valid_mae
+                best_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
                 torch.save(
                     model.state_dict(),
-                    os.path.join(save_path, args['model_path']))
+                    best_path)
+
         print('Validation statistics:', flush=True)
         log = '{} - density loss: {:.3f} | count loss: {:.3f} | MAE: {:.3f} | MSE: {:.3f}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), valid_density_loss, valid_count_loss, valid_mae, valid_mse)
         print(log, flush=True)
         with open(log_path, 'a') as f:
             f.write(log + '\n')
+
+
+    # Save final model in generic path
+    model_generic_path = os.path.join('models', args['dataset'], 'STGN.pth')
+    model_final_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
+    shutil.copyfile(model_final_path, model_generic_path)
 
 
 if __name__ == '__main__':
