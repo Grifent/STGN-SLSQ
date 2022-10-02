@@ -16,5 +16,5 @@ source ~/venv/default_3.8.6/bin/activate
 cd ~/SLSQ_Project/STGN-SLSQ/
 
 python process_data.py --HPC --exp_name large_person_type
-python train.py --HPC --exp_name large_person_type --load_all --adaptive --agg
-python test.py --HPC --exp_name large_person_type --load_all --adaptive --agg
+python train.py --HPC --exp_name large_person_type --adaptive --agg
+python test.py --HPC --exp_name large_person_type --adaptive --agg
