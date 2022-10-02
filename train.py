@@ -131,7 +131,7 @@ def main():
 
     # training routine
     for epoch in range(args['epochs']):
-        print_epoch = 'Epoch {}/{}'.format(epoch, args['epochs'] - 1)
+        print_epoch = 'Epoch {}/{}'.format(epoch + 1, args['epochs'])
         print(print_epoch, flush=True)
         with open(log_path, 'a') as f:
             f.write(print_epoch + '\n')
@@ -229,9 +229,13 @@ def main():
         valid_mae = sum(mae_hist) / len(mae_hist)
         if epoch == 0:
             min_mae = valid_mae
+            min_mse = valid_mse
+            min_epoch = epoch + 1
         else:
             if valid_mae <= min_mae:
                 min_mae = valid_mae
+                min_mse = valid_mse
+                min_epoch = epoch + 1
                 best_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
                 torch.save(
                     model.state_dict(),
@@ -245,6 +249,11 @@ def main():
 
 
     # Save final model in generic path
+    log = 'Final Results:\nBest MAE: {:.3f} | Best MSE: {:.3f} | Epoch # {}'.format(min_mae, min_mse, min_epoch)
+    print(log, flush=True)
+    with open(log_path, 'a') as f:
+            f.write(log + '\n')
+
     model_generic_path = os.path.join('models', args['dataset'], 'STGN.pth')
     model_final_path = os.path.join(save_path, f"{args['model_name']}_{save_time.strftime('%Y-%m-%d')}.pth")
     shutil.copyfile(model_final_path, model_generic_path)
