@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--max_len', default=5, type=int) # default is 4
     parser.add_argument('--channel', default=128, type=int)
     parser.add_argument('--block_num', default=4, type=int)
-    parser.add_argument('--shape', default=[360, 480], nargs='+', type=int)
+    parser.add_argument('--shape', default=[360, 640], nargs='+', type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--load_all', action='store_true', help='')
     parser.add_argument('--adaptive', action='store_true', help='')
@@ -52,8 +52,8 @@ def main():
         args['shape'] = [360, 640]
     elif args['dataset'] == 'TRANCOS':
         args['shape'] = [360, 480]
-    elif args['dataset'] == 'SLSQ':
-        args['shape'] = [720, 1280] # possibly increase this to [720, 1280] if GPU can handle it
+    # elif args['dataset'] == 'SLSQ':
+    #     args['shape'] = [720, 1280] # possibly increase this to [720, 1280] if GPU can handle it
     
     save_path = os.path.join('models', args['dataset'], args['exp_name'])
     print(args)
