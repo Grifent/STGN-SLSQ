@@ -130,6 +130,7 @@ def main():
         optimizer, args['epochs'])
 
     # training routine
+    t_start = time.time() 
     for epoch in range(args['epochs']):
         print_epoch = 'Epoch {}/{}'.format(epoch + 1, args['epochs'])
         print(print_epoch, flush=True)
@@ -247,9 +248,10 @@ def main():
         with open(log_path, 'a') as f:
             f.write(log + '\n')
 
+    t_end = time.time()
 
     # Save final model in generic path
-    log = 'Final Results:\nBest MAE: {:.3f} | Best MSE: {:.3f} | Epoch # {}'.format(min_mae, min_mse, min_epoch)
+    log = 'Final Results:\nBest MAE: {:.3f} | Best MSE: {:.3f} | Epoch # {} | Training time: {:.3f}'.format(min_mae, min_mse, min_epoch, t_end-t_start)
     print(log, flush=True)
     with open(log_path, 'a') as f:
             f.write(log + '\n')
