@@ -107,18 +107,19 @@ def main():
     model.eval()
     # get model to test
     if args['model_path'] is None:
-        model_full_path = os.path.join('./models', args['dataset'], 'STGN.pth')
+        model_full_path = os.path.join('./models', args['dataset'], 'STGN_latest.pth')
     else:
         model_full_path = os.path.join('./models', args['dataset'], args['exp_name'], args['model_path'])
     assert os.path.exists(model_full_path) is True
     model.load_state_dict(torch.load(model_full_path))
-    print('Load pre-trained model')
+    # print('Load pre-trained model')
 
     X, density, count = None, None, None
     
     preds = {}
     predictions = []
     counts = []
+    t1 = time.time()
     for i, (X, count, seq_len, names) in enumerate(valid_loader):
         X, count, seq_len = X.to(device), count.to(device), seq_len.to(device)
 
@@ -136,11 +137,14 @@ def main():
             
             predictions.append(count_pred[0, i])
             counts.append(count[0, i])
-            
+    t2 = time.time()
+    test_time = t2-t1
+
     mae = mean_absolute_error(predictions, counts)
-    rmse = np.sqrt(mean_squared_error(predictions, counts))
+    mse = mean_squared_error(predictions, counts)
+    rmse = np.sqrt(mse)
     
-    print('Dataset: {} | MAE: {:.3f} | MSE: {:.3f}'.format(args['dataset'], mae, rmse))
+    print('Dataset: {} | MAE: {:.3f} | MSE: {:.3f} | RMSE: {:.3f} | Eval time: {:.2f} seconds'.format(args['dataset'], mae, mse, rmse, test_time))
 
         
 if __name__ == '__main__':

@@ -170,7 +170,7 @@ def main():
             density_loss_hist.append(density_loss.item())
             count_loss_hist.append(count_loss.item())
             with torch.no_grad():
-                count_err = torch.sum(torch.abs(count_pred - count)) / N
+                count_err = torch.sum(torch.abs(count_pred - count)) / N # MAE
             count_err_hist.append(count_err.item())
         lr_scheduler.step()
         t1 = time.time()
@@ -207,9 +207,9 @@ def main():
             # compute the loss
             N = torch.sum(seq_len)
             count = count.sum(dim=[2,3,4])
-            count_loss = torch.sum((count_pred - count)**2) / (2 * N)
+            count_loss = torch.sum((count_pred - count)**2) / (2 * N) # basically MSE
             
-            density_loss = torch.sum((density_pred - density)**2) / (2 * N)
+            density_loss = torch.sum((density_pred - density)**2) / (2 * N) # basically MSE
             loss = density_loss
 
             # save the loss values
@@ -218,7 +218,7 @@ def main():
             count_loss_hist.append(count_loss.item())
             mae = torch.sum(torch.abs(count_pred - count)) / N
             mae_hist.append(mae.item())
-            mse = torch.sqrt(torch.sum((count_pred - count)**2) / N)
+            mse = torch.sum((count_pred - count)**2) / N
             mse_hist.append(mse.item())
         t1 = time.time()
 
@@ -227,15 +227,18 @@ def main():
         valid_density_loss = sum(density_loss_hist) / len(density_loss_hist)
         valid_count_loss = sum(count_loss_hist) / len(count_loss_hist)
         valid_mse = sum(mse_hist) / len(mse_hist)
+        valid_rmse = np.sqrt(valid_mse)
         valid_mae = sum(mae_hist) / len(mae_hist)
         if epoch == 0:
             min_mae = valid_mae
             min_mse = valid_mse
+            min_rmse = valid_rmse
             min_epoch = epoch + 1
         else:
             if valid_mae <= min_mae:
                 min_mae = valid_mae
                 min_mse = valid_mse
+                min_rmse = valid_rmse
                 min_epoch = epoch + 1
                 best_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d_%H-%M')}.pth")
                 torch.save(
@@ -243,7 +246,7 @@ def main():
                     best_path)
 
         print('Validation statistics:', flush=True)
-        log = '{} - density loss: {:.3f} | count loss: {:.3f} | MAE: {:.3f} | MSE: {:.3f}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), valid_density_loss, valid_count_loss, valid_mae, valid_mse)
+        log = '{} - density loss: {:.3f} | count loss: {:.3f} | MAE: {:.3f} | MSE: {:.3f} | RMSE: {:.3f}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), valid_density_loss, valid_count_loss, valid_mae, valid_mse, valid_rmse)
         print(log, flush=True)
         with open(log_path, 'a') as f:
             f.write(log + '\n')
@@ -251,7 +254,7 @@ def main():
     t_end = time.time()
 
     # Save final model in generic path
-    log = 'Final Results:\nBest MAE: {:.3f} | Best MSE: {:.3f} | Epoch # {} | Training time: {:.3f}'.format(min_mae, min_mse, min_epoch, t_end-t_start)
+    log = 'Final Results:\nBest MAE: {:.3f} | Best MSE: {:.3f} | Best RMSE: {:.3f} | Epoch # {} | Training time: {:.2f} seconds'.format(min_mae, min_mse, min_rmse, min_epoch, t_end-t_start)
     print(log, flush=True)
     with open(log_path, 'a') as f:
             f.write(log + '\n')
