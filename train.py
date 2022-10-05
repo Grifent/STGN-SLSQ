@@ -28,7 +28,8 @@ def main():
     parser.add_argument('--epochs', default=120, type=int)
     parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--gamma', default=5, type=float)
-    parser.add_argument('--max_len', default=5, type=int) # default is 4
+    # parser.add_argument('--max_len', default=5, type=int) # default is 4
+    parser.add_argument('--max_len', default=None, type=int) # Can leave as None, process_data.py ensures sequence length
     parser.add_argument('--channel', default=128, type=int)
     parser.add_argument('--block_num', default=4, type=int)
     parser.add_argument('--shape', default=[360, 640], nargs='+', type=int)

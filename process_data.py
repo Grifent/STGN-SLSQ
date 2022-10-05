@@ -17,6 +17,7 @@ import scipy.io as scio
 import argparse
 import shutil
 import misc.format_data as format_data
+# from tqdm import tqdm
 
 
 def get_points(root_path, mat_path):
@@ -227,138 +228,153 @@ def mkdirs(paths):
         mkdir(paths)
 
 
-def read_xml(xml_file_path, cc_model, save_dir, im_path, max_len, seq_num):
+def read_xml(xml_file_path, save_dir, im_path, max_len, min_len, seq_num):
 
     # skip_files = ['29_01_2022_9_56_17_00006.png', '29_01_2022_9_56_17_00005.png']
-    label_dict = ['none', 'head', 'head_swimming', 'head_boardrider']
 
     with open(xml_file_path) as fd:
         doc = xmltodict.parse(fd.read())
 
     images = doc['annotations']['image']
 
-    seq_counter = 0
+    prev_img_num = 99999999
+    img_list = [] # add a list that keeps track of consecutive images, that determines if a sequence is long enough before adding it
+    # for im in tqdm(range(len(images)), desc=f"Processing seq {seq_num}"):
     for im in range(len(images)):
-
         image = images[im]
-        image_name = images[im]['@name']
+        image_name = image['@name']
+        img_num = int(image_name[-9:-4]) # get ID of image
 
-        img = cv2.imread(os.path.join(im_path, image_name))
+        print('\t processing %d/%d - img ID %d' % (im+1, len(images), img_num)) # debugging
 
         # if image_name in skip_files:
         #     continue
 
         if "points" in image.keys():
-            if seq_counter % (max_len) == 0 and im != 0: # divide into sequences
-                seq_num += 1
-                seq_counter = 0
-            print('\t processing %d/%d - seq %d' % (im+1, len(images), seq_num))
-
-            # check if sequence is long enough
-            if im == (len(images) - 1) and seq_counter == 0:
-                print('Only 1 img for seq, skipping')
-                return (seq_num)
-            
-            seq_counter += 1
-
-            points = image['points']
-
-            point_list = []
-            labels_list = []
-
-            if type(points) != type([]):  # 'collections.OrderedDict':
-                head_label = points['@label']
-                head_coord = points['@points']  # str
-                labels_list.append(head_label)  # person type ('none', 'head', 'head_swimming', 'head_boardrider')
-                point_list.append(head_coord)
-
+            # Loop over images to find valid sequences, discarding images that do not meet min_len
+            if (img_num == (prev_img_num + 1) and len(img_list) < max_len) or not img_list: 
+                img_list.append(image)
             else:
-                for p in range(len(points)):
-                    point = points[p]
-                    head_label = point['@label']
-                    head_coord = point['@points']
-                    labels_list.append(head_label)
-                    point_list.append(head_coord)
+                if len(img_list) >= min_len:
+                    process_sequence(img_list, save_dir, im_path, seq_num)
+                    seq_num += 1
+                else: # debugging
+                    print("\t Not enough images, skipping sequence")
 
-            regions = []
-            frame_annots = {}
-            json_dict = {}
+                img_list.clear()
+                img_list.append(image)
 
-            points_arr = np.zeros((len(point_list), 2))
-            labels_arr = np.zeros((len(labels_list), 1))
-
-            i = 0
-            for p in point_list:
-                x, y = p.split(',')
-                x, y = float(x), float(y)
-
-                points_arr[i, 0] = x
-                points_arr[i, 1] = y
-
-                i += 1
-
-                # -- image plot --
-                # plt.scatter(x, y,  s=4)
-                img = cv2.circle(img, (int(x), int(y)), radius=3, color=(0, 0, 255), thickness=-1)
-
-                ret = {}
-                ret['name'] = "rect"
-                ret['x'] = x
-                ret['y'] = y
-                ret['width'] = 100
-                ret['height'] = 100
-
-                bbox = {}
-                bbox["shape_attributes"] = ret
-                bbox["region_attributes"] = {}
-
-                regions.append(bbox)
-
-            i = 0
-            for lab in labels_list:
-
-                lab_id = int(label_dict.index(lab))
-                labels_arr[i] = lab_id
-
-                i += 1
-
-            if cc_model == 'DKPNET':
-
-                # mat_path = os.path.join(save_dir + 'ground-truth/'+ 'GT_' + image_name.replace('png', 'mat')) # old path
-                # scio.savemat(npy_path, {'image_info': points_arr, 'labels': labels_arr})
-                seq_gt_path = os.path.join(save_dir, 'ground-truth/', str(seq_num))            
-                mkdir(seq_gt_path)
-                npy_path = os.path.join(seq_gt_path, image_name.replace('png', 'npy')) # with sequence IDs
-                np.save(npy_path, np.hstack((points_arr,labels_arr)))
-
-                img = cv2.imread(os.path.join(im_path, image_name))
-                seq_im_path = os.path.join(save_dir, 'images/', str(seq_num))            
-                mkdir(seq_im_path)
-                cv2.imwrite(os.path.join(seq_im_path, image_name), img)
-
-            if cc_model == 'PF':
-                frame_annots["filename"] = image_name
-                frame_annots["size"] = len(point_list)
-                frame_annots["regions"] = regions
-
-                json_dict[image_name + str(len(point_list))] = frame_annots
-                json_dict["file_attributes"] = {}
-
-                json_path = "json_files/" + image_name.replace('png', 'json')
-
-                # plt.savefig("temp/" + image_name)
-                cv2.imwrite(os.path.join("temp/", image_name), img)
-                with open(json_path, 'w') as fp:
-                    json.dump(json_dict, fp, sort_keys=True, indent=4)
+            prev_img_num = img_num 
 
         else: # CURRENTLY, NEGATIVE SAMPLES (no people in image) ARE NOT UTILISED FOR TRAINING
-            print('\t processing %d/%d - seq %d' % (im+1, len(images), seq_num))
-            print('-- No points')
+            # print('\t processing %d/%d - seq %d' % (im+1, len(images), seq_num))
+            print('\t -- No points, skipping')
             continue
 
     return (seq_num + 1) # go to next sequence for next beach
     
+
+def process_sequence(img_list, save_dir, im_path, seq_num):
+    """Process a valid sequence and store images/annotations in the desired location.
+
+    Params:
+    img_list: The list of images in the sequence
+    save_dir: The path to the directory to save the sequences
+    im_path: The path to the images to be processed.
+    seq_num: Number of current sequence being saved.
+    """    
+   
+    label_dict = ['none', 'head', 'head_swimming', 'head_boardrider']
+    
+    print('\t Saving seq %d - len %d images' % (seq_num, len(img_list))) # debugging
+
+    for image in img_list:
+        image_name = image['@name']
+        img = cv2.imread(os.path.join(im_path, image_name))
+
+        # if seq_counter % (max_len) == 0 and im != 0: # divide into sequences
+        #     seq_num += 1
+        #     seq_counter = 0
+
+        # # check if sequence is long enough when at end of folder (probably redundant now)
+        # if im == (len(images) - 1) and seq_counter == 0:
+        #     print('Only 1 img for seq, skipping')
+        #     return (seq_num)
         
+        # seq_counter += 1
+
+        points = image['points']
+
+        point_list = []
+        labels_list = []
+
+        if type(points) != type([]):  # 'collections.OrderedDict':
+            head_label = points['@label']
+            head_coord = points['@points']  # str
+            labels_list.append(head_label)  # person type ('none', 'head', 'head_swimming', 'head_boardrider')
+            point_list.append(head_coord)
+
+        else:
+            for p in range(len(points)):
+                point = points[p]
+                head_label = point['@label']
+                head_coord = point['@points']
+                labels_list.append(head_label)
+                point_list.append(head_coord)
+
+        regions = []
+
+        points_arr = np.zeros((len(point_list), 2))
+        labels_arr = np.zeros((len(labels_list), 1))
+
+        i = 0
+        for p in point_list:
+            x, y = p.split(',')
+            x, y = float(x), float(y)
+
+            points_arr[i, 0] = x
+            points_arr[i, 1] = y
+
+            i += 1
+
+            # -- image plot --
+            # plt.scatter(x, y,  s=4)
+            img = cv2.circle(img, (int(x), int(y)), radius=3, color=(0, 0, 255), thickness=-1)
+
+            ret = {}
+            ret['name'] = "rect"
+            ret['x'] = x
+            ret['y'] = y
+            ret['width'] = 100
+            ret['height'] = 100
+
+            bbox = {}
+            bbox["shape_attributes"] = ret
+            bbox["region_attributes"] = {}
+
+            regions.append(bbox)
+
+        i = 0
+        for lab in labels_list:
+
+            lab_id = int(label_dict.index(lab))
+            labels_arr[i] = lab_id
+
+            i += 1
+
+        # mat_path = os.path.join(save_dir + 'ground-truth/'+ 'GT_' + image_name.replace('png', 'mat')) # old path
+        # scio.savemat(npy_path, {'image_info': points_arr, 'labels': labels_arr})
+
+        # Save labels and images in sequence
+        seq_gt_path = os.path.join(save_dir, 'ground-truth/', str(seq_num))            
+        mkdir(seq_gt_path)
+        npy_path = os.path.join(seq_gt_path, image_name.replace('png', 'npy')) # with sequence IDs
+        np.save(npy_path, np.hstack((points_arr,labels_arr)))
+
+        img = cv2.imread(os.path.join(im_path, image_name))
+        seq_im_path = os.path.join(save_dir, 'images/', str(seq_num))            
+        mkdir(seq_im_path)
+        cv2.imwrite(os.path.join(seq_im_path, image_name), img)
         
 
 
@@ -369,8 +385,9 @@ if __name__ == '__main__':
                         help="Root path for the dataset")
     parser.add_argument('--dataset', default='SLSQ', type=str)
     parser.add_argument("--exp_name", default='large_person_type', help="Name of the experiment. ")
-    parser.add_argument("--model", default='DKPNET', help="Model that we are extracting features for. ")
-    parser.add_argument('--max_len', default=5, type=int) # default is 4
+    # parser.add_argument("--model", default='DKPNET', help="Model that we are extracting features for. ")
+    parser.add_argument('--max_len', default=5, type=int, help="Maximum sequence length. ") # default is 4
+    parser.add_argument('--min_len', default=2, type=int, help="Minimum sequence length. ") 
     parser.add_argument("--HPC", default=False, action="store_true", help="Whether to unpack data to HPC local storage first. ") 
     args = parser.parse_args()
 
@@ -444,7 +461,7 @@ if __name__ == '__main__':
             img_path = os.path.join(args.root_dir, 'images', folder)
             # img_path = os.path.join(args.root_dir, 'images/', folder)
 
-            seq_num = read_xml(annot_file_path, args.model, train_data_save_dir, img_path, args.max_len, seq_num)
+            seq_num = read_xml(annot_file_path, train_data_save_dir, img_path, args.max_len, args.min_len, seq_num)
 
         print('extracting annotations of testing set ....')
         seq_num = 0 # reset sequence count
@@ -457,10 +474,11 @@ if __name__ == '__main__':
             annot_file_path = os.path.join(args.root_dir, 'annots/{}.xml'.format(folder))
             img_path = os.path.join(args.root_dir, 'images', folder)
 
-            seq_num = read_xml(annot_file_path, args.model, test_data_save_dir, img_path, args.max_len, seq_num)
+            seq_num = read_xml(annot_file_path, test_data_save_dir, img_path, args.max_len, args.min_len, seq_num)
     
     except Exception as exc:
-        format_data.cleanup(args.root_dir)
+        if args.HPC:
+            format_data.cleanup(args.root_dir)
         raise RuntimeError(f"Error during processing data: {exc}") from exc
             
 
