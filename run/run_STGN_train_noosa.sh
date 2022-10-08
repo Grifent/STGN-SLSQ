@@ -15,7 +15,7 @@ source ~/environments/environment_python3.8.6.sh
 source ~/venv/default_3.8.6/bin/activate
 cd ~/SLSQ_Project/STGN-SLSQ/
 
-python process_data.py --HPC --exp_name noosa --max_len 5 --min_len 2
-python train.py --HPC --exp_name noosa --load_all --agg --epochs 100 --shape 720 1280
-python test.py --HPC --exp_name noosa --load_all --agg --shape 720 1280
+python process_data.py --HPC --exp_name noosa --max_len 5 --min_len 3
+python train.py --HPC --exp_name noosa --load_all --max_len 5 --min_len 3 --adaptive --agg --epochs 100 --shape 720 1280
+python test.py --HPC --exp_name noosa --load_all --adaptive --agg --shape 720 1280
 python misc/cleanup.py
