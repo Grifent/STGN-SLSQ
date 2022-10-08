@@ -28,8 +28,9 @@ def main():
     parser.add_argument('--epochs', default=120, type=int)
     parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--gamma', default=5, type=float)
-    # parser.add_argument('--max_len', default=5, type=int) # default is 4
-    parser.add_argument('--max_len', default=None, type=int) # Can leave as None, process_data.py ensures sequence length
+    parser.add_argument('--max_len', default=5, type=int, help="Max sequence length to train on. ") # default is 4
+    parser.add_argument('--min_len', default=2, type=int, help="Minimum sequence length to train on. ")
+    # parser.add_argument('--max_len', default=None, type=int) # Can leave as None, process_data.py ensures sequence length
     parser.add_argument('--channel', default=128, type=int)
     parser.add_argument('--block_num', default=4, type=int)
     parser.add_argument('--shape', default=[360, 640], nargs='+', type=int)
@@ -62,7 +63,8 @@ def main():
         os.makedirs(save_path)
     
     save_time = datetime.now()
-    log_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d_%H-%M')}.pth.txt")
+    save_string = f"{args['model_name']}_ep{args['epochs']}_min{args['min_len']}max{args['max_len']}_{save_time.strftime('%Y-%m-%d_%H-%M')}.pth"
+    log_path = os.path.join(save_path, save_string + ".txt")
     if os.path.exists(log_path):
         os.remove(log_path)
     with open(log_path, 'w') as f:
@@ -241,7 +243,7 @@ def main():
                 min_mse = valid_mse
                 min_rmse = valid_rmse
                 min_epoch = epoch + 1
-                best_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d_%H-%M')}.pth")
+                best_path = os.path.join(save_path, save_string)
                 torch.save(
                     model.state_dict(),
                     best_path)
@@ -261,7 +263,7 @@ def main():
             f.write(log + '\n')
 
     model_generic_path = os.path.join('models', args['dataset'], 'STGN_latest.pth')
-    model_final_path = os.path.join(save_path, f"{args['model_name']}_ep{args['epochs']}_{save_time.strftime('%Y-%m-%d_%H-%M')}.pth")
+    model_final_path = os.path.join(save_path, save_string)
     shutil.copyfile(model_final_path, model_generic_path)
 
 

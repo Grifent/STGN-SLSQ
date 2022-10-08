@@ -64,7 +64,7 @@ def gaussian_filter_density(gt, gamma=3, k=4, adaptive=False, mask=None):
     for i, pt in enumerate(pts):
         pt2d = np.zeros(gt.shape, dtype=np.float32)
         pt2d[pt[1], pt[0]] = 1.
-        if adaptive:
+        if adaptive and pts.shape[0] >= k: # ensure there are enough points to use adaptive
             if gt_count > 1:
                 sigma = (np.array([distances[i][j] for j in range(1, k)])) * 0.1
             else:
